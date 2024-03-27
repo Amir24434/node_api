@@ -122,18 +122,36 @@ router.get('/api/products/:id', async (req, res) => {
 });
 
 
-// Get product by id
+// // Get product by id
+// router.get('/api/products/:category', async (req, res) => {
+//     try {
+//         const { category } = req.params;
+
+//         // Find the product by id
+//         const product = await Product.findOne({ category }).select('-createdAt -updatedAt -_id -__v');
+//         if (!product) {
+//             return res.status(404).json({ message: `Product with id '${category}' not found` });
+//         }
+
+//         res.status(200).json(product);
+//     } catch (error) {
+//         res.status(500).json({ message: error.message });
+//     }
+// });
+
+
+// Get products by category
 router.get('/api/products/:category', async (req, res) => {
     try {
         const { category } = req.params;
 
-        // Find the product by id
-        const product = await Product.findOne({ category }).select('-createdAt -updatedAt -_id -__v');
-        if (!product) {
-            return res.status(404).json({ message: `Product with id '${category}' not found` });
+        // Find the products by category
+        const products = await Product.find({ category }).select('-createdAt -updatedAt -__v');
+        if (!products || products.length === 0) {
+            return res.status(404).json({ message: `No products found in category '${category}'` });
         }
 
-        res.status(200).json(product);
+        res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
