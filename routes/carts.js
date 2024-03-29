@@ -1,118 +1,66 @@
 const express = require('express');
 const router = express.Router();
 const Cart = require('../models/cartModel');
-const User = require('../models/userModel');
 
-// Get all carts
-router.get('/api/carts', async (req, res) => {
+// Middleware to calculate the next available productId
+const calculateNextProductId = async () => {
     try {
-        const carts = await Cart.find({});
-        res.status(200).json(carts);
+        const lastCartItem = await Cart.findOne().sort({ productId: -1 });
+        return lastCartItem ? lastCartItem.productId + 1 : 1;
+    } catch (error) {
+        throw new Error(error.message);
+    }
+};
+
+// Retrieve all cart items
+router.get('/api/cart', async (req, res) => {
+    try {
+        const cartItems = await Cart.find({}, '-createdAt -updatedAt -__v -_id');
+        res.status(200).json(cartItems);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
 
-// Get a cart by ID
-router.get('/api/carts/:id', async (req, res) => {
+// Add a new product to the cart
+router.post('/api/cart', async (req, res) => {
     try {
-        const { id } = req.params;
-        const cart = await Cart.findById(id);
-        if (!cart) {
-            return res.status(404).json({ message: `Cannot find any cart with ID ${id}` });
-        }
-        res.status(200).json(cart);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
+        const { productName, price, image } = req.body;
 
-// // Create a new cart
-// router.post('/api/carts', async (req, res) => {
-//     try {
-//         const cart = await Cart.create(req.body);
-//         res.status(201).json(cart);
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// });
+        // Calculate the next available productId
+        const productId = await calculateNextProductId();
 
-// Update a cart
-router.put('/api/carts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updatedCart = await Cart.findByIdAndUpdate(id, req.body, { new: true });
-        if (!updatedCart) {
-            return res.status(404).json({ message: `Cannot find any cart with ID ${id}` });
-        }
-        res.status(200).json(updatedCart);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-// Delete a cart
-router.delete('/api/carts/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const deletedCart = await Cart.findByIdAndDelete(id);
-        if (!deletedCart) {
-            return res.status(404).json({ message: `Cannot find any cart with ID ${id}` });
-        }
-        res.status(200).json(deletedCart);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-
-// Create a new product
-router.post('/api/carts', async (req, res) => {
-    try {
-        const { user: userName, name, quantity, price, image } = req.body;
-
-        const user = await User.findOne({ name: userName });
-        if (!user) {
-            return res.status(404).json({ message: `User '${userName}' not found` });
-        }
-
-        const id = await calculateNextProductId();
-
-        const cart = await Cart.create({
-            id,
-            user: userName,
-            name,
-          
-            quantity,
+        // Create the cart item
+        const cartItem = await Cart.create({
+            productId,
+            productName,
             price,
             image
         });
 
-        res.status(201).json(product);
+        res.status(201).json(cartItem);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
 
+// Update a cart item quantity (removed since there's no quantity field in the model)
 
-
-
-// Get product by id
-router.get('/api/products/carts/:user', async (req, res) => {
+// Delete a cart item
+router.delete('/api/cart/:id', async (req, res) => {
     try {
-        const { user } = req.params;
+        const { id } = req.params;
 
-        // Find the product by id
-        const product = await Product.findOne({ user }).select('-createdAt -updatedAt -_id -__v');
-        if (!product) {
-            return res.status(404).json({ message: `Product with user '${user}' not found` });
+        // Find and delete the cart item by id
+        const cartItem = await Cart.findByIdAndDelete(id);
+        if (!cartItem) {
+            return res.status(404).json({ message: `Cart item with id '${id}' not found` });
         }
 
-        res.status(200).json(product);
+        res.status(200).json({ id });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
-
 
 module.exports = router;
