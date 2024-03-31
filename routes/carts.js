@@ -46,18 +46,19 @@ router.post('/api/cart', async (req, res) => {
 
 // Update a cart item quantity (removed since there's no quantity field in the model)
 
-// Delete a cart item
-router.delete('/api/cart/:id', async (req, res) => {
+// Delete a cart item by productId
+router.delete('/api/cart/:productId', async (req, res) => {
     try {
-        const { id } = req.params;
+        const { productId } = req.params;
 
-        // Find and delete the cart item by id
-        const cartItem = await Cart.findByIdAndDelete(id);
-        if (!cartItem) {
-            return res.status(404).json({ message: `Cart item with id '${id}' not found` });
+        // Find and delete the cart item by productId
+        const deletedCartItem = await Cart.findOneAndDelete({ productId });
+
+        if (!deletedCartItem) {
+            return res.status(404).json({ message: `Cart item with productId '${productId}' not found` });
         }
 
-        res.status(200).json({ id });
+        res.status(200).json(deletedCartItem);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
