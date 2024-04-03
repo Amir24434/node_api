@@ -29,55 +29,42 @@ router.get('/api/users/:id', async (req, res) => {
     }
 });
 
-// POST /api/signup
-router.post('/api/signup', async (req, res) => {
+router.post('/api/register', async (req, res) => {
     try {
-        // Extract email and password from the request body
-        const { email, password } = req.body;
-
-        // Check if email and password are provided
-        if (!email || !password) {
-            return res.status(400).json({ message: "Email and password are required fields" });
-        }
-
-        // Check if the user with the provided email already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "User with this email already exists" });
-        }
-
-        // Create a new user
-        const newUser = await User.create({ email, password });
-
-        // Return the newly created user object
-        res.status(201).json(newUser);
+      const { firstName, lastName, email, password } = req.body;
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ firstName, lastName, email, password: hashedPassword });
+      await newUser.save();
+      res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
-        // Handle any errors
-        console.error(error);
-        res.status(500).json({ message: "Internal server error" });
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-});
-
-
-
-// Login
-router.post('/api/login', async (req, res) => {
+  });
+  
+  router.post('/api/signin', async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Invalid password' });
-        }
-        const token = jwt.sign({ userId: user._id }, 'your-secret-key', { expiresIn: '1h' });
-        res.status(200).json({ message: 'Login successful', token });
+      const { email, password } = req.body;
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      const token = jwt.sign({ userId: user._id }, 'secretKey', { expiresIn: '1h' });
+      res.json({ token });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-});
+  });
+  
 
 // Get all users
 router.get('/api/users', async (req, res) => {
